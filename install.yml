@@ -1,0 +1,56 @@
+- hosts: master
+  become: true
+  become_user: root
+  tasks:
+    - name: Update apt-get repo and cache
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+    - name: Upgrade all apt packages
+      apt: upgrade=dist force_apt_get=yes
+
+
+    - name: set ufw allow outgoing
+      ufw: 
+       default: allow
+       port: outgoing
+
+    - name: set ufw allow rules
+      ufw: 
+       rule: allow
+       port: '{{ item }}'
+      with_items:
+        - ssh
+        - http
+        - https
+        - 2376
+        - 2379
+        - 2380
+        - 6443
+        - 10250
+
+    - name: set ufw allow udp port
+      ufw: 
+       rule: allow
+       port: 8472
+       proto: udp
+
+    - name: deny rest incoming
+      ufw: 
+       default: deny
+       port: incoming
+
+    - name: enable firewall
+      ufw: 
+       state: enabled
+
+
+
+
+# First install python on all nodes as ansible needs this
+- hosts: master
+  become: true
+  gather_facts: false
+  pre_tasks:
+  - name: Install python2 for Ansible
+    raw: bash -c "test -e /usr/bin/python || (apt -qqy update && apt install -qqy python-minimal)"
+    register: output
+    changed_when: output.stdout != ""
